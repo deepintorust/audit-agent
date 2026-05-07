@@ -21,11 +21,17 @@ class Consumer:
         self.connection = connection
         self.queue_name = queue_name
         self.handler = handler
+        self._channel: aio_pika.Channel | None = None
 
     async def run(self) -> None:
         channel = await self.connection.channel()
+        self._channel = channel
         await channel.set_qos(prefetch_count=4)
-        queue = await channel.declare_queue(self.queue_name, durable=True)
+        queue = await channel.declare_queue(
+            self.queue_name,
+            durable=True,
+            arguments={"x-dead-letter-exchange": f"{self.queue_name}.dlx"},
+        )
         async with queue.iterator() as it:
             async for msg in it:
                 async with msg.process(ignore_processed=True):
@@ -49,7 +55,9 @@ class Consumer:
         # Attempt is persisted in message body; DB step attempt should also be updated by worker.
         attempt = int(event.attempt or 0) + 1
         event.attempt = attempt
-        channel = msg.channel
+        channel = self._channel
+        if channel is None:
+            raise RuntimeError("consumer channel is not ready")
         body = json.dumps(event.model_dump()).encode("utf-8")
         retry_queue = f"{self.queue_name}.retry.60s" if attempt <= 2 else f"{self.queue_name}.retry.600s"
         await channel.default_exchange.publish(
@@ -58,4 +66,3 @@ class Consumer:
         )
         await msg.ack()
         await asyncio.sleep(0)
-

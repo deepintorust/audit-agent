@@ -27,9 +27,9 @@ def _suffix(filename: str) -> str:
     return os.path.splitext(filename or "")[1].lower()
 
 
-async def _download_to_temp(s3: S3Storage, key: str) -> str:
+async def _download_to_temp(s3: S3Storage, key: str, suffix: str = ".bin") -> str:
     # boto3 doesn't have native async; use thread.
-    fd, path = tempfile.mkstemp(prefix="audit-raw-", suffix=".bin")
+    fd, path = tempfile.mkstemp(prefix="audit-raw-", suffix=suffix or ".bin")
     os.close(fd)
 
     def _dl() -> None:
@@ -62,8 +62,8 @@ async def handle_parse(event: FileEvent) -> None:
         filename = f.filename
 
     s3 = storage()
-    local = await _download_to_temp(s3, key)
     ext = _suffix(filename)
+    local = await _download_to_temp(s3, key, suffix=ext or ".bin")
     if ext == ".pdf":
         if is_scanned_pdf(local):
             # Multimodal OCR per page, then merge into page blocks.
