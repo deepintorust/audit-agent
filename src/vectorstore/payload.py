@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def build_payload(*, file_id: str, meta: dict, chunk_index: int) -> dict:
+def build_payload(*, file_id: str, meta: dict, chunk_index: int, content: str = "") -> dict:
     return {
         "fileuuid": file_id,
         "project": (meta.get("project") or ""),
@@ -10,5 +10,6 @@ def build_payload(*, file_id: str, meta: dict, chunk_index: int) -> dict:
         "category": (meta.get("category") or ""),
         "subcategory": (meta.get("subcategory") or ""),
         "chunk_index": chunk_index,
+        "content": content,
     }
 
