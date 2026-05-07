@@ -21,8 +21,6 @@ def _build_point_id(file_id: str, chunk_index: int) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"{file_id}:{chunk_index}"))
 
 
-
-
 def _collection_vector_size(store, collection_name: str) -> int | None:
     info = store.client.get_collection(collection_name=collection_name)
     cfg = getattr(info, "config", None)
@@ -37,6 +35,8 @@ def _collection_vector_size(store, collection_name: str) -> int | None:
         if first is not None and hasattr(first, "size"):
             return int(first.size)
     return None
+
+
 async def handle_index(event: FileEvent) -> None:
     async with db().session() as session:
         p = PipelineRepo(session)
@@ -82,11 +82,14 @@ async def handle_index(event: FileEvent) -> None:
         chunk_vectors.append((chunk_index, vector))
         chunk_indexes.append(chunk_index)
 
-
     async with db().session() as session:
         rows = (
             await session.execute(
-                select(Chunk).where(Chunk.file_id == event.file_id, Chunk.run_id == event.run_id, Chunk.chunk_index.in_(chunk_indexes))
+                select(Chunk).where(
+                    Chunk.file_id == event.file_id,
+                    Chunk.run_id == event.run_id,
+                    Chunk.chunk_index.in_(chunk_indexes)
+                )
             )
         ).scalars().all()
         chunk_content_by_index = {int(r.chunk_index): r.content for r in rows}
@@ -105,7 +108,7 @@ async def handle_index(event: FileEvent) -> None:
         store.client.upsert(
             collection_name=store.settings.qdrant_collection,
             points=[
-                {"id": pid, "vector": vec, "payload": payload}  # qdrant-client accepts dicts
+                {"id": pid, "vector": vec, "payload": payload}
                 for pid, vec, payload in points
             ],
         )
