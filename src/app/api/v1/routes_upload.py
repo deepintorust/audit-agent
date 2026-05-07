@@ -52,7 +52,9 @@ async def upload_file(
 
         # Store raw file in object storage (non-blocking CPU, but network-bound and required anyway)
         key = f"raw/{file_hash_full}"
-        await storage.put_path(key=key, path=tmp_path, content_type=file.content_type or "")
+        await storage.put_path(
+            key=key, path=tmp_path, content_type=file.content_type or ""
+        )
         await storage.remove_temp(tmp_path)
 
         async with db.session() as session:
