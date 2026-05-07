@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/v1/document/submittal", tags=["files"])
 
 @router.post("/upload")
 async def upload_file(
-    file: Annotated[UploadFile, File(...)],
+    files: Annotated[list[UploadFile], File(...)],
     project: Annotated[str, Form()] = "",
     company: Annotated[str, Form()] = "",
     phase: Annotated[str, Form()] = "",
@@ -26,48 +26,51 @@ async def upload_file(
     rabbit=Depends(rabbit_dep),
     storage=Depends(storage_dep),
 ):
-    # Stream hash to avoid loading entire file into memory
-    hasher = hashlib.sha256()
-    tmp_path = await storage.write_upload_to_temp(file, hasher)
-    file_hash_full = hasher.hexdigest()
-    file_id = short_id_from_hash(file_hash_full)
+    results: list[dict[str, str]] = []
+    for file in files:
+        # Stream hash to avoid loading entire file into memory
+        hasher = hashlib.sha256()
+        tmp_path = await storage.write_upload_to_temp(file, hasher)
+        file_hash_full = hasher.hexdigest()
+        file_id = short_id_from_hash(file_hash_full)
 
-    async with db.session() as session:
-        repo = FileRepo(session)
-        run_id = await repo.create_or_get_run(
-            file_id=file_id,
-            file_hash_full=file_hash_full,
-            filename=file.filename or "",
-            content_type=file.content_type or "",
-            meta_frontend={
-                "project": project,
-                "company": company,
-                "phase": phase,
-                "category": category,
-                "subcategory": subcategory,
-            },
+        async with db.session() as session:
+            repo = FileRepo(session)
+            run_id = await repo.create_or_get_run(
+                file_id=file_id,
+                file_hash_full=file_hash_full,
+                filename=file.filename or "",
+                content_type=file.content_type or "",
+                meta_frontend={
+                    "project": project,
+                    "company": company,
+                    "phase": phase,
+                    "category": category,
+                    "subcategory": subcategory,
+                },
+            )
+
+        # Store raw file in object storage (non-blocking CPU, but network-bound and required anyway)
+        key = f"raw/{file_hash_full}"
+        await storage.put_path(key=key, path=tmp_path, content_type=file.content_type or "")
+        await storage.remove_temp(tmp_path)
+
+        async with db.session() as session:
+            repo = FileRepo(session)
+            await repo.set_storage(
+                file_id=file_id,
+                storage_backend="s3",
+                bucket=storage.settings.s3_bucket,
+                key=key,
+            )
+
+        event = FileEvent(
+            file_id=file_id, run_id=run_id, step=PipelineStep.STORE, attempt=0
         )
+        await rabbit.publish(ROUTING_STORE, event)
+        results.append({"file_id": file_id, "run_id": run_id, "status": "processing"})
 
-    # Store raw file in object storage (non-blocking CPU, but network-bound and required anyway)
-    key = f"raw/{file_hash_full}"
-    await storage.put_path(key=key, path=tmp_path, content_type=file.content_type or "")
-    await storage.remove_temp(tmp_path)
-
-    async with db.session() as session:
-        repo = FileRepo(session)
-        await repo.set_storage(
-            file_id=file_id,
-            storage_backend="s3",
-            bucket=storage.settings.s3_bucket,
-            key=key,
-        )
-
-    event = FileEvent(
-        file_id=file_id, run_id=run_id, step=PipelineStep.STORE, attempt=0
-    )
-    await rabbit.publish(ROUTING_STORE, event)
-
-    return {"file_id": file_id, "run_id": run_id, "status": "processing"}
+    return {"files": results}
 
 
 @router.get("/{file_id}/status")
