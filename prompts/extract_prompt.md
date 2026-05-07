@@ -35,11 +35,11 @@
 ## 输出格式（必须严格匹配字段名，不要增加字段）
 
 ```json
-{
-  "file": {"project":"","company":"","phase":"","category":"","subcategory":""},
-  "project": {"project_name":"","project_year":"","construction_unit":"","approval_info":""},
-  "company": {"company_name":"","uscc":"","address":"","contact":""}
-}
+{{
+  "file": {{"project":"","company":"","phase":"","category":"","subcategory":""}},
+  "project": {{"project_name":"","project_year":"","construction_unit":"","approval_info":""}},
+  "company": {{"company_name":"","uscc":"","address":"","contact":""}}
+}}
 ```
 
 ## 待抽取文本

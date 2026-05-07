@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 
 from sqlalchemy import select
 
@@ -12,6 +13,11 @@ from src.db.repo.pipeline_repo import PipelineRepo
 from src.mq.messages import FileEvent, PipelineStep
 from src.vectorstore.payload import build_payload
 from src.workers._deps import db, qdrant, storage
+
+
+def _build_point_id(file_id: str, chunk_index: int) -> str:
+    """Build a deterministic UUID point id accepted by Qdrant."""
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"{file_id}:{chunk_index}"))
 
 
 async def handle_index(event: FileEvent) -> None:
@@ -48,7 +54,7 @@ async def handle_index(event: FileEvent) -> None:
         rec = json.loads(line)
         chunk_index = int(rec["chunk_index"])
         vector = rec["vector"]
-        point_id = f"{event.file_id}-{chunk_index}"
+        point_id = _build_point_id(event.file_id, chunk_index)
         payload = build_payload(file_id=event.file_id, meta=meta, chunk_index=chunk_index)
         points.append((point_id, vector, payload))
         chunk_indexes.append(chunk_index)
