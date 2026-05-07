@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 import aio_pika
 
 from src.common.errors import FatalError, RetryableError
+from src.app.settings import get_settings
 from src.mq.messages import FileEvent
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,12 @@ class Consumer:
         # Attempt is persisted in message body; DB step attempt should also be updated by worker.
         attempt = int(event.attempt or 0) + 1
         event.attempt = attempt
+        max_attempts = max(1, int(get_settings().max_retry_attempts))
+        if attempt >= max_attempts:
+            logger.error("max retry attempts reached queue=%s attempt=%s event=%s", self.queue_name, attempt, event)
+            await msg.reject(requeue=False)
+            await asyncio.sleep(0)
+            return
         channel = self._channel
         if channel is None:
             raise RuntimeError("consumer channel is not ready")

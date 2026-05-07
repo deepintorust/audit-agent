@@ -6,7 +6,8 @@ import uuid
 
 from sqlalchemy import select
 
-from src.common.errors import RetryableError
+from src.common.errors import FatalError, RetryableError
+from src.db.orm.chunk import Chunk
 from src.db.orm.file import File
 from src.db.repo.chunk_repo import ChunkRepo
 from src.db.repo.pipeline_repo import PipelineRepo
@@ -18,6 +19,22 @@ from src.workers._deps import db, qdrant, storage
 def _build_point_id(file_id: str, chunk_index: int) -> str:
     """Build a deterministic UUID point id accepted by Qdrant."""
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"{file_id}:{chunk_index}"))
+
+
+def _collection_vector_size(store, collection_name: str) -> int | None:
+    info = store.client.get_collection(collection_name=collection_name)
+    cfg = getattr(info, "config", None)
+    params = getattr(cfg, "params", None)
+    vectors = getattr(params, "vectors", None)
+    if vectors is None:
+        return None
+    if hasattr(vectors, "size"):
+        return int(vectors.size)
+    if isinstance(vectors, dict):
+        first = next(iter(vectors.values()), None)
+        if first is not None and hasattr(first, "size"):
+            return int(first.size)
+    return None
 
 
 async def handle_index(event: FileEvent) -> None:
@@ -50,25 +67,59 @@ async def handle_index(event: FileEvent) -> None:
 
     points = []
     chunk_indexes: list[int] = []
+    chunk_vectors: list[tuple[int, list[float]]] = []
+    expected_dim = _collection_vector_size(store, store.settings.qdrant_collection)
     for line in lines:
         rec = json.loads(line)
         chunk_index = int(rec["chunk_index"])
         vector = rec["vector"]
-        point_id = _build_point_id(event.file_id, chunk_index)
-        payload = build_payload(file_id=event.file_id, meta=meta, chunk_index=chunk_index)
-        points.append((point_id, vector, payload))
+        if not isinstance(vector, list) or not vector:
+            raise FatalError(f"invalid embedding vector for chunk_index={chunk_index}")
+        if expected_dim is not None and len(vector) != expected_dim:
+            raise FatalError(
+                f"embedding dim mismatch for chunk_index={chunk_index}: got {len(vector)}, expected {expected_dim}"
+            )
+        chunk_vectors.append((chunk_index, vector))
         chunk_indexes.append(chunk_index)
+
+    async with db().session() as session:
+        rows = (
+            await session.execute(
+                select(Chunk).where(
+                    Chunk.file_id == event.file_id,
+                    Chunk.run_id == event.run_id,
+                    Chunk.chunk_index.in_(chunk_indexes)
+                )
+            )
+        ).scalars().all()
+        chunk_content_by_index = {int(r.chunk_index): r.content for r in rows}
+
+    for chunk_index, vector in chunk_vectors:
+        point_id = _build_point_id(event.file_id, chunk_index)
+        payload = build_payload(
+            file_id=event.file_id,
+            meta=meta,
+            chunk_index=chunk_index,
+            content=chunk_content_by_index.get(chunk_index, ""),
+        )
+        points.append((point_id, vector, payload))
 
     def _upsert() -> None:
         store.client.upsert(
             collection_name=store.settings.qdrant_collection,
             points=[
-                {"id": pid, "vector": vec, "payload": payload}  # qdrant-client accepts dicts
+                {"id": pid, "vector": vec, "payload": payload}
                 for pid, vec, payload in points
             ],
         )
 
-    await asyncio.to_thread(_upsert)
+    try:
+        await asyncio.to_thread(_upsert)
+    except Exception as e:  # noqa: BLE001
+        async with db().session() as session:
+            p = PipelineRepo(session)
+            await p.fail_step(run_id=event.run_id, step=PipelineStep.INDEX.value, error_code="INDEX_UPSERT_FAILED", error_msg=str(e)[:500])
+        raise
 
     async with db().session() as session:
         repo = ChunkRepo(session)

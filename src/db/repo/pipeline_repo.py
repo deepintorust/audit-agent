@@ -49,6 +49,12 @@ class PipelineRepo:
         row.error_code = error_code
         row.error_msg = error_msg
         row.ended_at = datetime.now(timezone.utc)
+
+        run = await self.session.scalar(select(PipelineRun).where(PipelineRun.run_id == run_id))
+        if run:
+            run.status = "FAILED"
+            run.current_step = step
+
         await self.session.commit()
 
     async def mark_run_done(self, *, run_id: str) -> None:
