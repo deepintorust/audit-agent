@@ -66,10 +66,11 @@ services:
       retries: 1
 
   qdrant-init:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    platform: linux/arm64
+    image: audit-agent:latest
     env_file: .env
+    environment:
+      PYTHONPATH: /app    
     depends_on:
       qdrant:
         condition: service_started
