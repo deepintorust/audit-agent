@@ -25,7 +25,11 @@ class Consumer:
     async def run(self) -> None:
         channel = await self.connection.channel()
         await channel.set_qos(prefetch_count=4)
-        queue = await channel.declare_queue(self.queue_name, durable=True)
+        queue = await channel.declare_queue(
+            self.queue_name,
+            durable=True,
+            arguments={"x-dead-letter-exchange": f"{self.queue_name}.dlx"},
+        )
         async with queue.iterator() as it:
             async for msg in it:
                 async with msg.process(ignore_processed=True):
@@ -58,4 +62,3 @@ class Consumer:
         )
         await msg.ack()
         await asyncio.sleep(0)
-
