@@ -68,10 +68,9 @@ services:
   qdrant-init:
     platform: linux/arm64
     image: audit-agent:latest
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
     env_file: .env
+    environment:
+      PYTHONPATH: /app    
     depends_on:
       qdrant:
         condition: service_started
