@@ -1,0 +1,59 @@
+phases:
+  - phase: "立项文件"
+    code: "01"
+    categories:
+      - category: "项目建议书"
+        subcategories:
+          - "项目建议书"
+          - "报批文件"
+      - category: "可行性研究"
+        subcategories:
+          - "可行性研究报告"
+          - "可行性研究报告评估意见"
+          - "报批文件"
+          - "审查意见"
+      - category: "项目评估"
+        subcategories:
+          - "项目评估（包括借贷承诺评估）"
+          - "论证文件"
+      - category: "项目审批"
+        subcategories:
+          - "项目审批"
+          - "项目核准"
+          - "项目备案申请报告及批复"
+          - "补充文件"
+          - "项目变更调整文件"
+  - phase: "勘察、设计文件"
+    code: "02"
+    categories:
+      - category: "勘察"
+        subcategories:
+          - "工程测量（可研阶段）"
+          - "岩土勘察报告（初勘）"
+          - "岩土勘察报告（详勘）"
+          - "会议纪要、往来函件"
+      - category: "设计"
+        subcategories:
+          - "初步设计报告"
+          - "初步设计报告请示、批复"
+          - "施工图"
+          - "施工图审查"
+          - "会议纪要、往来函件"
+  - phase: "概算投资文件"
+    code: "03"
+    categories:
+      - category: "概算"
+        subcategories:
+          - "初步设计概算"
+          - "初步设计概算批复"
+          - "在建项目概算执行情况统计表"
+          - "概算调整"
+          - "概算调整批复"
+      - category: "投资"
+        subcategories:
+          - "投资计划"
+          - "投资计划下达"
+          - "投资计划调整"
+          - "投资完成情况表"
+          - "项目投资决策资料"
+          - "投资项目终止决策报告及审批资料"
