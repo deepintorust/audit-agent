@@ -3,7 +3,7 @@ pydantic-settings
 pytest
 pytest-asyncio
 httpx
-qdrant-client
+qdrant-client==1.9.1
 fastapi
 uvicorn
 pydantic

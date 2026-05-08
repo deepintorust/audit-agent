@@ -34,7 +34,9 @@ class Settings(BaseSettings):
     storage_backend: str = Field(default="s3", alias="STORAGE_BACKEND")  # s3|local
     s3_endpoint_url: str = Field(default="http://rustfs:9000", alias="S3_ENDPOINT_URL")
     s3_access_key_id: str = Field(default="rustfsadmin", alias="S3_ACCESS_KEY_ID")
-    s3_secret_access_key: str = Field(default="rustfsadmin", alias="S3_SECRET_ACCESS_KEY")
+    s3_secret_access_key: str = Field(
+        default="rustfsadmin", alias="S3_SECRET_ACCESS_KEY"
+    )
     s3_bucket: str = Field(default="audit-files", alias="S3_BUCKET")
     s3_region: str = Field(default="us-east-1", alias="S3_REGION")
 
@@ -58,14 +60,23 @@ class Settings(BaseSettings):
     embed_batch_size: int = Field(default=64, alias="EMBED_BATCH_SIZE")
     embed_dim: int = Field(default=1024, alias="EMBED_DIM")
     embed_model_path: str = Field(default="/models/bge-m3", alias="EMBED_MODEL_PATH")
-    embed_device: str | None = Field(default=None, alias="EMBED_DEVICE")  # "cuda:0" | "cpu" | None(auto)
+    embed_device: str | None = Field(
+        default=None, alias="EMBED_DEVICE"
+    )  # "cuda:0" | "cpu" | None(auto)
     embed_use_fp16: bool = Field(default=True, alias="EMBED_USE_FP16")
     embed_use_bf16: bool = Field(default=False, alias="EMBED_USE_BF16")
     embed_max_length: int = Field(default=512, alias="EMBED_MAX_LENGTH")
     max_retry_attempts: int = Field(default=6, alias="MAX_RETRY_ATTEMPTS")
 
     # Prompts (allow runtime override via env without rebuilding images)
-    extract_prompt_template_path: str | None = Field(default=None, alias="EXTRACT_PROMPT_TEMPLATE_PATH")
+    extract_prompt_template_path: str | None = Field(
+        default=None, alias="EXTRACT_PROMPT_TEMPLATE_PATH"
+    )
+
+    # Knowledge search controls
+    similarity_threshold: float = Field(default=0.7, alias="SIMILARITY_THRESHOLD")
+    max_input_chars: int = Field(default=20000, alias="MAX_INPUT_CHARS")
+    qdrant_search_limit: int = Field(default=50, alias="QDRANT_SEARCH_LIMIT")
 
 
 _settings: Settings | None = None

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.app.logging import configure_logging
 from src.app.settings import get_settings
 from src.app.api.v1.routes_upload import router as files_router
+from src.app.api.v1.routes_chat import router as chat_router
 
 
 def create_app() -> FastAPI:
@@ -22,8 +23,8 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(files_router)
+    app.include_router(chat_router)
     return app
 
 
 app = create_app()
-

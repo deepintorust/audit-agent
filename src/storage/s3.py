@@ -94,3 +94,27 @@ class S3Storage:
                 )
 
         await asyncio.to_thread(_upload)
+
+    async def download_to_path(self, *, bucket: str, key: str, dest_path: str) -> None:
+        """Download object from bucket/key to local dest_path (blocking in thread)."""
+
+        def _download() -> None:
+            self._ensure_bucket_sync()
+            # download_file will create/overwrite dest_path
+            self._client.download_file(Bucket=bucket, Key=key, Filename=dest_path)
+
+        await asyncio.to_thread(_download)
+
+    async def download_fileobj(self, *, bucket: str, key: str):
+        """Return a file-like object (BytesIO) with the object content."""
+        import io
+
+        buf = io.BytesIO()
+
+        def _download() -> None:
+            self._ensure_bucket_sync()
+            self._client.download_fileobj(Bucket=bucket, Key=key, Fileobj=buf)
+
+        await asyncio.to_thread(_download)
+        buf.seek(0)
+        return buf
