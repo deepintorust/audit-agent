@@ -10,18 +10,24 @@ class DocxParser(Parser):
     def parse(self, path: str) -> DocumentIR:
         doc = Document(path)
         blocks: list[Block] = []
-        heading_path: list[str] = []
+        # First extract tables (rows) if any
+        for table in doc.tables:
+            for r_idx, row in enumerate(table.rows, start=1):
+                cells = [(cell.text or "").strip() for cell in row.cells]
+                # skip empty rows
+                if not any(cells):
+                    continue
+                # join cells with full-width semicolon to keep readability
+                text = "；".join(c for c in cells if c)
+                blocks.append(Block(kind="table_row", text=text, meta={"row": r_idx}))
+
+        # Then extract paragraph text (skip heading styles)
         for p in doc.paragraphs:
             text = (p.text or "").strip()
             if not text:
                 continue
             style = (p.style.name or "").lower() if p.style else ""
             if style.startswith("heading"):
-                # best-effort heading level detection
-                heading_path = heading_path[:0]
-                heading_path.append(text)
-                blocks.append(Block(kind="heading", text=text, meta={"heading_path": list(heading_path)}))
-            else:
-                blocks.append(Block(kind="paragraph", text=text, meta={"heading_path": list(heading_path)}))
+                continue
+            blocks.append(Block(kind="paragraph", text=text, meta={}))
         return DocumentIR(blocks=blocks)
-

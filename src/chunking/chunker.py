@@ -8,7 +8,7 @@ def chunk_ir(
     ir: DocumentIR,
     *,
     target_chars: int = 1200,
-    overlap_chars: int = 200,
+    overlap_chars: int = 0,
 ) -> list[str]:
     # Start from block texts, keep order, then pack into chunks.
     texts: list[str] = []
@@ -28,11 +28,8 @@ def chunk_ir(
             buf = f"{buf}\n{t}"
         else:
             chunks.append(buf)
-            if overlap_chars > 0 and len(buf) > overlap_chars:
-                buf = buf[-overlap_chars:] + "\n" + t
-            else:
-                buf = t
+            # no overlap between chunks per new requirement
+            buf = t
     if buf:
         chunks.append(buf)
     return chunks
-
