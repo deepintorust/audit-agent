@@ -162,3 +162,5 @@ Desktop.ini
 *.sqlite3
 
 volumes/
+
+.claude/
