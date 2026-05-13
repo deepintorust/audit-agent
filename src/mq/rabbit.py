@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import json
 
 import aio_pika
 
 from src.app.settings import Settings
+
+logger = logging.getLogger(__name__)
 from src.mq.topology import (
     EXCHANGE,
     QUEUE_CHUNK,
@@ -33,6 +37,26 @@ class Rabbit:
     async def connect(self) -> None:
         if self._conn and not self._conn.is_closed:
             return
+
+        # Force DNS resolution before connecting to catch resolution failures early
+        try:
+            loop = asyncio.get_event_loop()
+            addrinfo = await loop.getaddrinfo(
+                self.settings.rabbitmq_host,
+                int(self.settings.rabbitmq_port),
+                family=0,
+            )
+            logger.debug(
+                "DNS resolved %s:%s to %s",
+                self.settings.rabbitmq_host,
+                self.settings.rabbitmq_port,
+                addrinfo[0][4][0],
+            )
+        except Exception as e:
+            raise ConnectionError(
+                f"DNS resolution failed for RabbitMQ {self.settings.rabbitmq_host}:{self.settings.rabbitmq_port}: {e}"
+            ) from e
+
         url = (
             f"amqp://{self.settings.rabbitmq_user}:{self.settings.rabbitmq_password}"
             f"@{self.settings.rabbitmq_host}:{self.settings.rabbitmq_port}{self.settings.rabbitmq_vhost}"
