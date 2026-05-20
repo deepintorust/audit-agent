@@ -8,14 +8,14 @@ fastapi
 uvicorn
 pydantic
 python-multipart
-SQLAlchemy>=2.0
-aiomysql
+SQLAlchemy==2.0.49
+aiomysql==0.3.2
 aio-pika
 boto3
 python-docx
 openpyxl
 pypdf
 PyMuPDF
-FlagEmbedding
 PyYAML
 cryptography
+aiolimiter

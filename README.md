@@ -9,7 +9,16 @@
 2) 启动：
 
 ```bash
-docker compose up -d --build
+mkdir -p volumes/{qdrant_storage,mysql,rustfs,rabbitmq} && chmod -R 777 volumes
+
+# 第一步：启动基础服务
+docker compose up -d mysql rabbitmq rustfs qdrant
+
+# 第二步：运行 qdrant-init（初始化 Qdrant 集合，完成后自动退出）
+docker compose up -d qdrant-init
+
+# 第三步：启动 gateway 和所有 worker 服务
+docker compose up -d gateway worker-store worker-parse worker-extract worker-fuse worker-chunk worker-embed worker-index
 ```
 
 服务：

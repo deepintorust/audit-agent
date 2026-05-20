@@ -25,4 +25,3 @@ def load_mapping(path: str) -> ClassificationMapping:
                     continue
                 reverse[sub_s] = (phase, category)
     return ClassificationMapping(reverse=reverse)
-

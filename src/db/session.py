@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from src.app.settings import Settings
 
@@ -15,7 +20,7 @@ class Database:
         )
         self._engine: AsyncEngine = create_async_engine(
             dsn,
-            pool_pre_ping=True,
+            pool_pre_ping=False,
             pool_recycle=3600,
         )
         self._sessionmaker = async_sessionmaker(self._engine, expire_on_commit=False)
@@ -24,4 +29,3 @@ class Database:
     async def session(self) -> AsyncSession:
         async with self._sessionmaker() as session:
             yield session
-

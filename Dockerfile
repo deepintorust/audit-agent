@@ -31,6 +31,5 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 复制源码文件
-COPY . .
-
-CMD ["uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY src/ ./src/
+COPY scripts/ ./scripts/
